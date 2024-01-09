@@ -1,5 +1,5 @@
 ## 环境安装
-1. Clone repo and install [requirements.txt](https://github.com/ultralytics/yolov5/blob/master/requirements.txt) in a [**Python>=3.8.0**](https://www.python.org/) environment, including [**PyTorch>=1.8**](https://pytorch.org/get-started/locally/).推荐使用Conda虚拟环境
+1. Clone repo and install [requirements.txt](https://github.com/AIDrive-Research/EdgeAI-Engine/blob/main/train/object-detection/requirements.txt) in a [**Python>=3.8.0**](https://www.python.org/) environment, including [**PyTorch>=1.8**](https://pytorch.org/get-started/locally/).推荐使用Conda虚拟环境
 
 2. ```bash
     git clone  https://github.com/AIDrive-Research/EdgeAI-Pipeline.git
@@ -14,7 +14,7 @@
     JPEGImages:
     	xxx.jpg
     Annotations:
-    	xxx.txt
+    	xxx.xml
    ```
 
 2. 将VOC格式数据集转换成YOLO格式
@@ -88,5 +88,5 @@
 1. ONNX_RKNN导出，这里我们支持RK有NPU能力的全系列，包括RK1808、RV1109、RV1126、RK3399PRO、RK3566、RK3568、RK3588、RK3588S、RV1106、RV1103
 
    ```python
-    python export_rk.py --weights xxx.py --include onnx --simplify --opset 12 --rknpu rk3588
+    python export_rk.py --weights xxx.pt --include onnx --simplify --opset 12 --rknpu rk3588
    ```
