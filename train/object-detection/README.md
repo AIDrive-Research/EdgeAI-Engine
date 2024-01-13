@@ -2,8 +2,8 @@
 1. Clone repo and install [requirements.txt](https://github.com/AIDrive-Research/EdgeAI-Engine/blob/main/train/object-detection/requirements.txt) in a [**Python>=3.8.0**](https://www.python.org/) environment, including [**PyTorch>=1.8**](https://pytorch.org/get-started/locally/).推荐使用Conda虚拟环境
 
 2. ```bash
-    git clone  https://github.com/AIDrive-Research/EdgeAI-Pipeline.git
-    cd EdgeAI-Pipeline
+    git clone https://github.com/AIDrive-Research/EdgeAI-Engine.git
+    cd EdgeAI-Engine/train/object-detection
     pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
    ```
 
