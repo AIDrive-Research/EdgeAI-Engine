@@ -69,13 +69,13 @@
 1. 单卡训练
 
    ```python
-    python train.py --data data/custom.yaml --epochs 300 --weights '' --cfg models/yolov5s.yaml --batch-size 128 --device 0,1
+    python train.py --data data/custom.yaml --epochs 300 --weights '' --cfg models/yolov5s.yaml --batch-size 128 --device 0
    ```
 
    如果使用预训练
 
    ```python
-    python train.py --data data/custom.yaml --epochs 300 --weights yolov5s.pt --batch-size 128 --device 0,1
+    python train.py --data data/custom.yaml --epochs 300 --weights yolov5s.pt --batch-size 128 --device 0
    ```
 
 2. 推荐使用多卡训练
