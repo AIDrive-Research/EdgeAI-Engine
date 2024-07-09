@@ -1,10 +1,14 @@
 ## 环境安装
-1. 我们提供了python3.6、python3.8、python3.10的量化环境whl文件，根据自己的运行环境进行安装
+1. 系统要求
+- 操作系统：Linux x86_64架构
 
-    ```bash
+2. 提供了python3.8、python3.9、python3.10的量化环境whl文件，根据自己的运行环境进行安装
+
+   ```bash
      cd rknn-toolkit2
+     pip3 install -r requirements_xxx.txt
      pip3 install xxx.whl
-    ```
+   ```
 
 ## 模型量化
 1. 在训练集中随机选取图片进行模型量化，精度校准，数量在80-120之间，目录结构如下：
