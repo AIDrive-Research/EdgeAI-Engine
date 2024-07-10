@@ -1,13 +1,15 @@
 ## 环境安装
 1. 系统要求
-- 操作系统：Linux x86_64架构
+- 操作系统：Ubuntu
 
-2. 提供了python3.8、python3.9、python3.10的量化环境whl文件，根据自己的运行环境进行安装
+2. 提供了python3.8的量化环境whl文件，根据自己的运行环境进行安装
 
    ```bash
      cd rknn-toolkit2
-     pip3 install -r requirements_xxx.txt
-     pip3 install xxx.whl
+     conda create -n py38-rk1.6 python=3.8
+     conda activate py38-rk1.6
+     pip3 install -i https://pypi.doubanio.com/simple/ tf-estimator-nightly==2.8.0.dev2021122109
+     pip3 install rknn_toolkit2-1.6.0+81f21f4d-cp38-cp38-linux_x86_64.whl
    ```
 
 ## 模型量化
