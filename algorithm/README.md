@@ -47,4 +47,4 @@
     `_filter(self, model_name, model_data)`: 过滤不符合条件的目标。  
 
 - 公有方法  
-`postprocess(self, args, draw_image)`: 后处理方法。根据提供的参数和图像数据进行后处理，过滤、处理目标并生成最终结果。
+    `postprocess(self, args, draw_image)`: 后处理方法。根据提供的参数和图像数据进行后处理，过滤、处理目标并生成最终结果。

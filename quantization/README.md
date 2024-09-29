@@ -2,7 +2,8 @@
 1. 系统要求
 - 操作系统：Ubuntu
 
-2. 提供了python3.8的量化环境whl文件，根据自己的运行环境进行安装
+2. 提供了python3.8的量化环境whl文件，根据设备的软件版本进行安装
+- v3.1.1之前的版本（不包含v3.1.1）
 
    ```bash
      cd rknn-toolkit2
@@ -11,6 +12,15 @@
      pip3 install -i https://pypi.doubanio.com/simple/ tf-estimator-nightly==2.8.0.dev2021122109
      pip3 install rknn_toolkit2-1.6.0+81f21f4d-cp38-cp38-linux_x86_64.whl
    ```
+- v3.1.1之后的版本（包含v3.1.1）
+
+   ```bash
+     cd rknn-toolkit2
+     conda create -n py38-rk2.2 python=3.8
+     conda activate py38-rk2.2
+     pip3 install rknn_toolkit2-2.2.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+   ```
+
 
 ## 模型量化
 1. 在训练集中随机选取图片进行模型量化，精度校准，数量在80-120之间，目录结构如下：
