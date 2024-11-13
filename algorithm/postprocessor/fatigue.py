@@ -29,12 +29,12 @@ class Postprocessor(BasePostprocessor):
         return [int(min_x), int(min_y), int(max_x), int(max_y)]
 
     def __get_eye_rectangle(self, xyxy, hit):
-        rectangle = {
-            'label': None,
-            'xyxy': xyxy,
-            'color': self.alert_color if hit else self.non_alert_color
-        }
-        return rectangle
+        return self._gen_rectangle(
+            xyxy=xyxy,
+            color=self.alert_color if hit else self.non_alert_color,
+            label=None,
+            conf_=None
+        )
 
     def __check_lost_target(self, tracker_result):
         for track_id in list(self.targets.keys()):

@@ -55,7 +55,8 @@ class Postprocessor:
                     'rectangles': [],
                     'polygons': {},
                     'lines': {}
-                }
+                },
+                'custom': {}
             }
         }
 

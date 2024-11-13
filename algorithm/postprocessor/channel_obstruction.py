@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from shapely.geometry import Polygon, box
 
 import gv
 from logger import LOGGER
@@ -9,7 +10,6 @@ from .utils import json_utils
 from .utils.cv_utils.color_utils import rgb_reverse
 from .utils.cv_utils.crop_utils import crop_poly
 from .utils.image_utils import base64_to_opencv, opencv_to_base64
-from .utils.unique_id_utils import get_object_id
 
 
 class Postprocessor(BasePostprocessor):
@@ -26,29 +26,43 @@ class Postprocessor(BasePostprocessor):
         self.pre_gray = None
         self.threshold = None
         self.length = None
-        self.window = None
+        self.windows = {}
 
-    def __reinfer(self, roi):
+    @staticmethod
+    def __is_rectangle_polygon_intersect(xyxy, polygon):
+        """
+        判断矩形与多边形是否相交
+        Args:
+            xyxy: 矩形的左上角和右下角坐标
+            polygon: 多边形的顶点
+        Returns: True or False
+        """
+        polygon = Polygon(polygon)
+        rect = box(xyxy[0], xyxy[1], xyxy[2], xyxy[3])
+        return polygon.intersects(rect)
+
+    def __reinfer(self, rois):
         draw_image = base64_to_opencv(self.draw_image)
-        if roi:
-            cropped_image = crop_poly(draw_image, roi)
-        else:
-            cropped_image = draw_image
-        gray_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-        cropped_image = rgb_reverse(cropped_image)
-        source_data = {
-            'source_id': self.source_id,
-            'time': self.time * 1000000,
-            'infer_image': opencv_to_base64(cropped_image),
-            'draw_image': None,
-            'reserved_data': {
-                'specified_model': [self.model_name],
-                'unsort': True
+        gray_image = cv2.cvtColor(draw_image, cv2.COLOR_BGR2GRAY)
+        count = 0
+        for roi in rois:
+            cropped_image = crop_poly(draw_image, roi['coord'])
+            cropped_image = rgb_reverse(cropped_image)
+            source_data = {
+                'source_id': self.source_id,
+                'time': self.time * 1000000,
+                'infer_image': opencv_to_base64(cropped_image),
+                'draw_image': None,
+                'reserved_data': {
+                    'specified_model': [self.model_name],
+                    'roi': roi,
+                    'unsort': True
+                }
             }
-        }
-        self.rq_source.put(json_utils.dumps(source_data))
+            self.rq_source.put(json_utils.dumps(source_data))
+            count += 1
         self.reinfer_result[self.time] = {
-            'count': 1,
+            'count': count,
             'draw_image': self.draw_image,
             'gray_image': gray_image,
             'result': []
@@ -64,25 +78,29 @@ class Postprocessor(BasePostprocessor):
         return True
 
     def __process_blacklist(self, feature):
-        id_, score = self.index.search(feature, self.similarity) if self.index is not None else (None, None)
-        if id_ is not None:
+        id_, score = self.index.search(feature) if self.index is not None else (None, None)
+        if score >= self.similarity and id_ is not None:
             base_info = self.index.query(id_)
             if base_info:
                 return True, base_info['name']
         return False, '正常'
 
     def __process_whitelist(self, feature):
-        id_, score = self.index.search(feature, self.similarity) if self.index is not None else (None, None)
-        if id_ is not None:
+        id_, score = self.index.search(feature) if self.index is not None else (None, None)
+        if score >= self.similarity and id_ is not None:
             base_info = self.index.query(id_)
             if base_info:
                 return False, base_info['name']
         return True, '通道堵塞'
 
-    def __check_move(self, gray_image):
+    def __check_move(self, gray_image, polygons):
         if self.pre_gray is None:
             self.pre_gray = gray_image.copy()
-            return True
+            for polygon in polygons.values():
+                polygon['ext']['move'] = True
+            return
+        for polygon in polygons.values():
+            polygon['ext']['move'] = False
         fg_mask = cv2.absdiff(gray_image, self.pre_gray)
         self.pre_gray = gray_image.copy()
         ret, fg_mask = cv2.threshold(fg_mask, 30, 255, cv2.THRESH_BINARY)
@@ -95,8 +113,12 @@ class Postprocessor(BasePostprocessor):
             xyxy = [xywh[0], xywh[1], xywh[0] + xywh[2], xywh[1] + xywh[3]]
             if xyxy[2] - xyxy[0] < self.min_len or xyxy[3] - xyxy[1] < self.min_len:
                 continue
-            return True
-        return False
+            for polygon in polygons.values():
+                if not polygon['ext'].get('move'):
+                    if self.__is_rectangle_polygon_intersect(xyxy, polygon['polygon']):
+                        polygon['ext']['move'] = True
+                        break
+        return
 
     def _process(self, result, filter_result):
         hit = False
@@ -120,51 +142,54 @@ class Postprocessor(BasePostprocessor):
         if self.timeout is None:
             self.timeout = (self.frame_interval / 1000) * 2
             LOGGER.info('source_id={}, alg_name={}, timeout={}'.format(self.source_id, self.alg_name, self.timeout))
-        if self.window is None:
-            self.window = RatioWindow(self.length, self.threshold)
-        roi = self.reserved_args.get('roi')
+        rois = self.reserved_args.get('roi')
+        if not rois:
+            return False
+        data = {
+            'polygons': []
+        }
+        for roi in rois:
+            data['polygons'].append({
+                'id': roi['id'],
+                'name': roi['name'],
+                'polygon': roi['coord']
+            })
+        if not self.windows:
+            for roi in rois:
+                self.windows[roi['id']] = RatioWindow(self.length, self.threshold)
+        polygons = self._gen_polygons(data)
         if not self.reserved_data:
-            self.__reinfer(roi)
+            self.__reinfer(rois)
             return False
         self.__check_expire()
-        polygons = []
-        if roi is not None:
-            data = {
-                'polygons': [{
-                    'id': get_object_id(),
-                    'name': None,
-                    'polygon': roi
-                }]
-            }
-            polygons = self._gen_polygons(data)
         model_name, targets = next(iter(filter_result.items()))
         if self.reinfer_result.get(self.time) is None:
             LOGGER.warning('Not found reinfer result, time={}'.format(self.time))
             return False
-        self.reinfer_result[self.time]['result'].append(targets)
+        self.reinfer_result[self.time]['result'].append((targets, self.reserved_data['roi']))
         if len(self.reinfer_result[self.time]['result']) < self.reinfer_result[self.time]['count']:
             return False
         reinfer_result_ = self.reinfer_result.pop(self.time)
         self.draw_image = reinfer_result_['draw_image']
         gray_image = reinfer_result_['gray_image']
-        move_flag = self.__check_move(gray_image)
-        if not move_flag:
-            for targets in reinfer_result_['result']:
-                for target in targets:
-                    feature = target.pop('feature', None)
-                    if feature is not None:
-                        np_feature = np.array(feature, dtype=np.float32)
-                        if 'blacklist' == self.group_type:
-                            hit_, label = self.__process_blacklist(np_feature)
-                        elif 'whitelist' == self.group_type:
-                            hit_, label = self.__process_whitelist(np_feature)
-                        else:
-                            LOGGER.error('Unknown group_type: {}'.format(self.group_type))
-                            continue
-                        if self.window.insert({'time': self.time, 'data': {'hit': hit_}}):
-                            hit = hit_
-                            for _, value in polygons.items():
-                                value['color'] = self.alert_color
+        self.__check_move(gray_image, polygons)
+        for targets, roi in reinfer_result_['result']:
+            polygon = polygons[roi['id']]
+            if not polygon['ext']['move']:
+                feature = targets[0].pop('feature', None)
+                if feature is not None:
+                    np_feature = np.array(feature, dtype=np.float32)
+                    if 'blacklist' == self.group_type:
+                        hit_, label = self.__process_blacklist(np_feature)
+                    elif 'whitelist' == self.group_type:
+                        hit_, label = self.__process_whitelist(np_feature)
+                    else:
+                        LOGGER.error('Unknown group_type: {}'.format(self.group_type))
+                        continue
+                    if self.windows[roi['id']].insert({'time': self.time, 'data': {'hit': hit_}}):
+                        hit = hit_
+                        polygon['name'] = label
+                        polygon['color'] = self.alert_color
         result['hit'] = hit
         result['data']['bbox']['polygons'].update(polygons)
         result['data']['group'] = {

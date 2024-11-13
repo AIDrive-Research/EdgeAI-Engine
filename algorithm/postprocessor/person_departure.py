@@ -2,6 +2,7 @@ import time
 
 from postprocessor import Postprocessor as BasePostprocessor
 from .utils import json_utils
+from .utils.time_utils import sec2hms
 
 
 class Postprocessor(BasePostprocessor):
@@ -39,9 +40,9 @@ class Postprocessor(BasePostprocessor):
                 self._set_ext(polygon, result=count)
                 self.duration[polygon_str]['duration'] = int(time.time()) - self.duration[polygon_str]['time']
                 if polygon['name']:
-                    polygon['name'] = '{}: {}s'.format(polygon['name'], self.duration[polygon_str]['duration'])
+                    polygon['name'] = '{}-{}'.format(polygon['name'], sec2hms(self.duration[polygon_str]['duration']))
                 else:
-                    polygon['name'] = '{}s'.format(self.duration[polygon_str]['duration'])
+                    polygon['name'] = '{}'.format(sec2hms(self.duration[polygon_str]['duration']))
             else:
                 for rectangle in rectangles:
                     if self._get_ext(rectangle, 'in_polygon'):
